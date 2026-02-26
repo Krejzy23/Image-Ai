@@ -64,9 +64,9 @@ export async function POST(req: Request) {
     const user = {
       clerkId: id,
       email: email_addresses[0].email_address,
-      username: username!,
-      firstName: first_name,
-      lastName: last_name,
+      username: username ?? email_addresses[0].email_address.split("@")[0],
+      firstName: first_name ?? "",
+      lastName: last_name ?? "",
       photo: image_url,
     };
 
@@ -85,20 +85,26 @@ export async function POST(req: Request) {
   }
 
   // UPDATE
-  if (eventType === "user.updated") {
-    const { id, image_url, first_name, last_name, username } = evt.data;
+// UPDATE
+if (eventType === "user.updated") {
+  const { id, image_url, first_name, last_name, username } = evt.data;
 
-    const user = {
-      firstName: first_name,
-      lastName: last_name,
-      username: username!,
-      photo: image_url,
-    };
+  // Normalize data – nikdy null, vždy string
+  const user = {
+    firstName: first_name ?? "",      // pokud Clerk poslal null, použijeme ""
+    lastName: last_name ?? "",
+    username: username ?? "unknown",  // fallback pro případ, že by username chyběl
+    photo: image_url ?? "",
+  };
 
+  try {
     const updatedUser = await updateUser(id, user);
-
     return NextResponse.json({ message: "OK", user: updatedUser });
+  } catch (err) {
+    console.error("Error updating user:", err);
+    return new Response("User update failed", { status: 500 });
   }
+}
 
   // DELETE
   if (eventType === "user.deleted") {
